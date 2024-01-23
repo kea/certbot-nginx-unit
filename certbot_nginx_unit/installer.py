@@ -15,7 +15,7 @@ from certbot.display import util as display_util
 
 from typing import Any
 
-from unitc import Unitc
+from .unitc import Unitc
 
 CONFIG_TLS_CERTIFICATE_PATH = "/listeners/*:443/tls/certificate"
 
@@ -23,8 +23,8 @@ logger = logging.getLogger(__name__)
 
 
 class Installer(common.Plugin, interfaces.Installer):
-    """Nginx Unit plugin"""
-    description = "Nginx Unit plugin"
+    """Nginx Unit certificate installer plugin for Certbot"""
+    description = "Nginx Unit certificate installer plugin for Certbot"
 
     def __init__(self, *args: Any, **kwargs: Any):
         super().__init__(*args, **kwargs)
@@ -36,7 +36,7 @@ class Installer(common.Plugin, interfaces.Installer):
         pass
 
     def get_all_names(self) -> Iterable[str]:
-        pass
+        return []
 
     def deploy_cert(self, domain: str, cert_path: str, key_path: str, chain_path: str, fullchain_path: str) -> None:
         """Deploy certificate.

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import tempfile
 import subprocess
 import logging
@@ -35,9 +37,8 @@ class Unitc(object):
 
         return output
 
-    def get(self, path: str, input_data: bytes | None = None,
-            success_message: str = "", error_message: str = "") -> str:
-        return self.call("PUT", path, input_data, success_message, error_message)
+    def get(self, path: str, success_message: str = "", error_message: str = "") -> str:
+        return self.call("GET", path, None, success_message, error_message)
 
     def put(self, path: str, input_data: bytes | None = None, success_message: str = "", error_message: str = ""):
         self.call("PUT", path, input_data, success_message, error_message)

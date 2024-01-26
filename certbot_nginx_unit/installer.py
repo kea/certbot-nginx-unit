@@ -10,6 +10,7 @@ from datetime import datetime
 from typing import Callable, Optional, List, Union, Iterable
 
 from certbot import interfaces
+from certbot import errors
 from certbot.plugins import common
 from certbot.display import util as display_util
 
@@ -24,12 +25,14 @@ logger = logging.getLogger(__name__)
 
 class Installer(common.Plugin, interfaces.Installer):
     """Nginx Unit certificate installer plugin for Certbot"""
+
     description = "Nginx Unit certificate installer plugin for Certbot"
 
     def __init__(self, *args: Any, **kwargs: Any):
         super().__init__(*args, **kwargs)
         self._configuration = None
         self._prepared = None
+        self.unitc = Unitc()
 
     @classmethod
     def add_parser_arguments(cls, add: Callable[..., None]) -> None:
@@ -79,55 +82,86 @@ class Installer(common.Plugin, interfaces.Installer):
         path = "/certificates/" + cert_bundle_name
         success_message = "Certificate deployed"
         error_messge = "nginx unit copy to /certificates failed"
-        unitc = Unitc()
-        unitc.put(path, certificates, success_message, error_messge)
+        self.unitc.put(path, certificates, success_message, error_messge)
 
     def _delete_certificates(self, cert_bundle_name: str):
         path = "/certificates/" + cert_bundle_name
         success_message = "Certificate deleted"
         error_message = "nginx unit delete from /certificates failed"
-        unic = Unitc()
-        unic.delete(path, None, success_message, error_message)
+        self.unic.delete(path, None, success_message, error_message)
 
     def _update_certificate_name_list_to_config(self, cert_bundle_name: str, bundle_names_to_remove):
+        self._ensure_tls_listener()
 
+        cert_bundle_names = self._configuration["listeners"]["*:443"]["tls"]["certificate"]
+        cert_bundle_names = [item for item in cert_bundle_names if item not in bundle_names_to_remove]
+        cert_bundle_names.append(cert_bundle_name)
+        self._configuration["listeners"]["*:443"]["tls"]["certificate"] = cert_bundle_names
+
+        path = "/config/listeners"
+        input_data = json.dumps(self._configuration["listeners"]).encode()
+        success_message = "Certificate deployed"
+        error_message = "nginx unit copy to /certificates failed"
+
+        self.unitc.put(path, input_data, success_message, error_message)
+
+    def _ensure_tls_listener(self):
         if "listeners" not in self._configuration:
-            self._configuration["listeners"] = {}
+            raise errors.Error("No listeners configured")
         if "*:443" not in self._configuration["listeners"]:
-            self._configuration["listeners"]["*:443"] = {}
+            if "*:80" not in self._configuration["listeners"]:
+                raise errors.Error("No '*:80' default listeners configured")
+            self._configuration["listeners"]["*:443"] = self._configuration["listeners"]["*:80"]
+            self._configuration["listeners"]["*:80"] = {"pass": "routes/acme"}
+            self._ensure_acme_route()
         if "tls" not in self._configuration["listeners"]["*:443"]:
             self._configuration["listeners"]["*:443"]["tls"] = {}
         if "certificate" not in self._configuration["listeners"]["*:443"]["tls"]:
             self._configuration["listeners"]["*:443"]["tls"]["certificate"] = []
 
-        cert_bundle_names = self._configuration["listeners"]["*:443"]["tls"]["certificate"]
-        cert_bundle_names = [item for item in cert_bundle_names if item not in bundle_names_to_remove]
-        cert_bundle_names.append(cert_bundle_name)
+    def _ensure_acme_route(self):
+        acme_challenge_url = "/.well-known/acme-challenge"
+        acme_base_path = "/srv/www/unit"
+        acme_route = [
+            {
+                "match": {"uri": acme_challenge_url + "/*"},
+                "action": {"share": acme_base_path + "/$uri"},
+            }
+        ]
+        acme_route_json = json.dumps(acme_route)
 
-        path = '/config' + CONFIG_TLS_CERTIFICATE_PATH
-        input_data = json.dumps(cert_bundle_names).encode()
-        success_message = "Certificate deployed"
-        error_message = "nginx unit copy to /certificates failed"
+        if "routes" not in self._configuration or not self._configuration["routes"]:
+            self._configuration["routes"] = {"acme": acme_route}
+            self.unitc.put("/routes/acme", acme_route_json.encode())
+            return
 
-        unitc = Unitc()
-        unitc.put(path, input_data, success_message, error_message)
-        self._configuration["listeners"]["*:443"]["tls"]["certificate"] = cert_bundle_names
+        if isinstance(self._configuration["routes"], dict):
+            if "acme" in self._configuration["routes"]:
+                return
+
+            self._configuration["routes"]["acme"] = acme_route
+            self.unitc.put("/routes/acme", acme_route_json.encode())
+            return
+
+        if isinstance(self._configuration["routes"], list):
+            routes = {"acme": acme_route, "default": self._configuration["routes"]}
+            self._configuration["routes"] = routes
+            self.unitc.put("/routes", json.dumps(routes).encode())
+            return
 
     @staticmethod
     def _get_certificates_content(fullchain_path, key_path):
-        with open(key_path, 'rb') as f:
+        with open(key_path, "rb") as f:
             certificates = f.read()
-        with open(fullchain_path, 'rb') as f:
+        with open(fullchain_path, "rb") as f:
             certificates += f.read()
         return certificates
 
-    @staticmethod
-    def _get_unit_configuration(path: str):
+    def _get_unit_configuration(self, path: str):
         error_message = "nginx unit get configuration failed"
-        unitc = Unitc()
-        configuration_str = unitc.get(path, None, "Get configuration", error_message)
+        configuration_str = self.unitc.get(path, "Get configuration", error_message)
 
-        # wrap configuration to a dedicated class
+        # @todo wrap configuration to a dedicated class
         return json.loads(configuration_str)
 
     def enhance(self, domain: str, enhancement: str, options: Optional[Union[List[str], str]] = None) -> None:
@@ -152,9 +186,7 @@ class Installer(common.Plugin, interfaces.Installer):
         pass
 
     def prepare(self) -> None:
-        """Prepare the authenticator/installer.
-
-        """
+        """Prepare the authenticator/installer."""
         # @todo verify "unitc" executable
         # @todo lock to prevent concurrent multi update
         self._prepared = True

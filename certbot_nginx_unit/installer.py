@@ -33,6 +33,7 @@ class Installer(common.Plugin, interfaces.Installer):
         self._configuration = None
         self._prepared = None
         self.unitc = Unitc()
+        self._entropy = datetime.now().strftime("%Y%m%d%H%M%S")
 
     @classmethod
     def add_parser_arguments(cls, add: Callable[..., None]) -> None:
@@ -56,8 +57,7 @@ class Installer(common.Plugin, interfaces.Installer):
         """
         logger.debug("deploy cert for domain: %s", domain)
 
-        now = datetime.now().strftime("%Y%m%d%H%M%S")
-        cert_bundle_name = domain + "_" + now
+        cert_bundle_name = domain + "_" + self._entropy
         self._configuration = self._get_unit_configuration("/config")
         self._upload_certificates(fullchain_path, key_path, cert_bundle_name)
 

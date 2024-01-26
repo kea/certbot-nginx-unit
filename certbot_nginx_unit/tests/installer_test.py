@@ -4,19 +4,9 @@ import tempfile
 
 import pytest
 from unittest.mock import patch
-from unittest.mock import ANY
 
 from certbot import errors
 from certbot_nginx_unit.installer import Installer
-
-class StartWith(object):
-    "A helper object that compares equal to everything."
-
-    def __init__(self, value):
-        self.value = value
-
-    def __eq__(self, other):
-        return True # starts with value
 
 def empty_configuration():
     return {
@@ -119,6 +109,8 @@ def test_only_80_listener_configuration(unitc_mock):
     put_success_message = 'Certificate deployed'
     put_error_message = 'nginx unit copy to /certificates failed'
 
+    entropy = installer._entropy
+
     print(repr(unitc_mock.method_calls))
     unitc_mock.get.assert_any_call("/config", get_success_message, get_error_message)
     unitc_mock.get.assert_any_call('/certificates', get_success_message, get_error_message),
@@ -128,12 +120,12 @@ def test_only_80_listener_configuration(unitc_mock):
     )
     unitc_mock.put.assert_any_call(
         '/config/listeners',
-        ANY, #b'{"*:80": {"pass": "routes/acme"}, "*:443": {"pass": "routes", "tls": {"certificate": ["domain_20240126123147"]}}}',
+        b'{"*:80": {"pass": "routes/acme"}, "*:443": {"pass": "routes", "tls": {"certificate": ["domain_' + entropy.encode() + b'"]}}}',
         put_success_message,
         put_error_message
     )
     unitc_mock.put.assert_any_call(
-        StartWith("/certificates/domain_"), # '/certificates/domain_20240126123147',
+        "/certificates/domain_" + entropy,
         b'certificate contentcertificate content',
         'Certificate deployed',
         'nginx unit copy to /certificates failed'

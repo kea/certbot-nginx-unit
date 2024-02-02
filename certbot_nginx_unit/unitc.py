@@ -17,12 +17,13 @@ class Unitc(object):
         with tempfile.TemporaryFile() as out:
             try:
                 params = ["unitc", method, path]
+                logger.debug("Unic params: %s", " ".join(params))
                 proc = subprocess.run(params,
                                       env=util.env_no_snap_for_external_calls(),
                                       input=input_data,
                                       stdout=out, stderr=out, check=False)
             except (OSError, ValueError):
-                msg = "Unable to run the command: %s" % " ".join(params)
+                msg = "Unable to run the command: %s" + " ".join(params)
                 logger.error(msg)
                 raise errors.SubprocessError(msg)
 

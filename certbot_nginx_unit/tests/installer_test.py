@@ -6,7 +6,7 @@ import pytest
 from unittest.mock import patch
 
 from certbot import errors
-from certbot_nginx_unit.installer import Installer
+from certbot_nginx_unit.configurator import Configurator
 
 def empty_configuration():
     return {
@@ -77,7 +77,7 @@ def put_configuration_side_effect_80_listener(*args):
 @patch('certbot_nginx_unit.unitc')
 def test_empty_configuration(unitc_mock):
     unitc_mock.get.side_effect = get_configuration_side_effect
-    installer = Installer([], [])
+    installer = Configurator([], [])
     installer.unitc = unitc_mock
 
     with tempfile.NamedTemporaryFile() as cert_file:
@@ -91,7 +91,7 @@ def test_empty_configuration(unitc_mock):
 def test_only_80_listener_configuration(unitc_mock):
     unitc_mock.get.side_effect = get_configuration_side_effect_80_listener
     unitc_mock.put.side_effect = put_configuration_side_effect_80_listener
-    installer = Installer([], [])
+    installer = Configurator([], [])
     installer.unitc = unitc_mock
 
     notify = patch('certbot.display.util.notify')

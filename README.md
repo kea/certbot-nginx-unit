@@ -7,14 +7,13 @@ Current Features
 =====================
 
 * Supports NGINX Unit/1.31*
+* Supports cerbot 1.21+
 * automatic install certificates
 
 Install
 =======
 
-After you have installed the plugin and have configured the unit listener for port 80 and 443 (https://unit.nginx.org/howto/certbot/#generating-certificates)
-
-In the listeners section the `*:80` is for the webroot certification generation and the `*:443` part is for the application and for storing the name of the certificate.
+You have to install the plugin and configure the unit listener for port 80
 
 ```
 # unitc /config
@@ -23,40 +22,79 @@ In the listeners section the `*:80` is for the webroot certification generation 
 {
     "listeners": {
         "*:80": {
-            "pass": "routes/acme"
-        },
-        "*:443": {
-            "pass": "applications/myapp",
-            "tls": {
-                "certificate": []
-            }
+            "pass": "routes"
         }
-    },
-
-    "routes": {
-        "acme": [
+        "routes": [
             {
-                "match": {
-                    "uri": "/.well-known/acme-challenge/*"
-                },
-
                 "action": {
-                    "share": "/var/www/www.example.com/"
+                    "share": "/srv/www/unit/index.html"
                 }
             }
         ]
-    }
-    "applications": {
-        "myapp": {
-            "type": "python",
-            "module": "wsgi",
-            "path": "/usr/www/wsgi-app/"
-        }
     }
 }
 ```
 
 Now you can generate and automatic install the certificate with
 ```
-# certbot -a webroot -w /www/certbot/ -i nginx_unit_installer -d www.myapp.com
+# certbot --configurator nginx_unit -d www.myapp.com
+```
+The results is a certificate created and installed 
+
+```
+# unitc /certificates
+```
+
+```
+{
+	"www.myapp.com_20240202145800": {
+		"key": "RSA (2048 bits)",
+		"chain": [
+			{
+			    <omissis>
+			}
+        ]
+    }
+}
+```
+and the configuration updated
+
+```
+# unitc /config
+```
+
+```
+{
+	"listeners": {
+		"*:80": {
+			"pass": "routes"
+		},
+
+		"*:443": {
+			"pass": "routes",
+			"tls": {
+				"certificate": [
+					"www.myapp.com_20240202145800"
+				]
+			}
+		}
+	},
+
+	"routes": [
+		{
+			"match": {
+				"uri": "/.well-known/acme-challenge/*"
+			},
+
+			"action": {
+				"share": "/srv/www/unit/$uri"
+			}
+		},
+		{
+			"action": {
+				"share": "/srv/www/unit/index.html"
+			}
+		}
+	]
+}
 ```

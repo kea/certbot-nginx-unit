@@ -37,7 +37,7 @@ setup(
     },
     entry_points={
         "certbot.plugins": [
-            "nginx_unit_installer = certbot_nginx_unit.installer:Installer",
+            "nginx_unit = certbot_nginx_unit.configurator:Configurator",
         ],
     },
 )

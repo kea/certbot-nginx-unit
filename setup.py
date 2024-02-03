@@ -14,7 +14,7 @@ setup(
     url="https://github.com/kea/certbot-nginx-unit",
     author="Manuel Baldassarri",
     author_email="m.baldassarri@gmail.com",
-    license="MIT",
+    license="LICENSE",
     classifiers=[
         "Programming Language :: Python :: 3",
         "Programming Language :: Python :: 3.9",

@@ -1,10 +1,9 @@
 [build-system]
-requires = ["setuptools"]
+requires = ["setuptools>=64", "setuptools_scm>=8"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "certbot-nginx-unit"
-version = "0.9.2"
 description = "Nginx Unit plugin for Certbot"
 readme = "README.md"
 authors = [
@@ -24,7 +23,7 @@ classifiers = [
     "Environment :: Plugins",
     "Operating System :: OS Independent",
 ]
-dynamic=["optional-dependencies"]
+dynamic = ["optional-dependencies", "version"]
 
 [project.urls]
 Homepage = "https://github.com/kea/certbot-nginx-unit"
@@ -32,3 +31,5 @@ Issues = "https://github.com/kea/certbot-nginx-unit/issues"
 
 [project.entry-points."certbot.plugins"]
 nginx_unit = "certbot_nginx_unit.configurator:Configurator"
+
+[tool.setuptools_scm]

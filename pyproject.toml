@@ -33,3 +33,4 @@ Issues = "https://github.com/kea/certbot-nginx-unit/issues"
 nginx_unit = "certbot_nginx_unit.configurator:Configurator"
 
 [tool.setuptools_scm]
+version_file = "version.py"

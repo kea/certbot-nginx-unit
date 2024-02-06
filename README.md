@@ -1,24 +1,57 @@
-Certbot NGINX Unit plugin
-=========================
+# Certbot NGINX Unit plugin #
 
 This is a certbot plugin for using certbot in combination with NGINX Unit https://unit.nginx.org/
 
-Requirement
-===========
+## Requirement ##
+
 The command `unitc` should be installed and executable. 
 
-Current Features
-=====================
+## Current Features ##
 
 * Supports NGINX Unit/1.31*
 * Supports cerbot 1.21+
 * install certificates
 * automatic renewal certificates
 
-Install
-=======
+## Installation ##
 
-You have to install the plugin and configure the unit listener for port 80
+* Via Snap (requires certbot to be installed via snap):
+    ```
+    WIP
+    ```
+
+* Via Pip
+    ```
+    pip install certbot-nginx-unit
+    ```
+
+* Via Pip virtual env
+
+    Create a virtual environment, to avoid conflicts
+    ```
+    python3 -m venv /some/path
+    ```
+
+    use the pip in the virtual environment to install or update
+
+    ```
+    /some/path/bin/pip install -U certbot-nginx-unit
+    ```
+
+    use the cerbot from the virtualenv, to avoid accidentally
+    using one from a different environment that does not have this library
+    ```
+    /some/path/bin/certbot
+    ```
+
+    or uninstall other certbot system installation and link it to /usr/bin
+    ```
+    ln -s /some/path/bin/certbot /usr/bin
+    ```
+
+## Usage ##
+
+Configure the unit listener with `*:80` or `*:443`
 
 ```
 # unitc /config
@@ -40,7 +73,7 @@ You have to install the plugin and configure the unit listener for port 80
 }
 ```
 
-Now, you can generate and automatically install the certificate with
+Now, generate and automatically install the certificate with
 
 ```
 # certbot --configurator nginx_unit -d www.myapp.com
@@ -58,10 +91,10 @@ The result is a certificate created and installed.
 		"key": "RSA (2048 bits)",
 		"chain": [
 			{
-			    <omissis>
+				<omissis>
 			}
-        ]
-    }
+		]
+	}
 }
 ```
 and the configuration updated
@@ -106,13 +139,11 @@ and the configuration updated
 }
 ```
 
-Auto-renew certificates
-=======================
+## Auto-renew certificates ##
 
 Certbot installs a timer on the system to renew certificates one month before the certificate expiration date.
 
-Multiple domains/applications
-=============================
+## Multiple domains/applications ## 
 
 You can run the certbot command for each domain
 

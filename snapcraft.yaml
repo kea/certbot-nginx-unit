@@ -15,14 +15,11 @@ parts:
   certbot-nginx-unit:
     plugin: python
     source: .
-    python-packages:
-      - pip
-      - setuptools
-      - setuptools-scm
-      - wheel
-    override-pull: |
-        snapcraftctl pull
-        snapcraftctl set-version `python3 -m setuptools_scm`
+    override-build: |
+        snapcraftctl build
+        snapcraftctl set-version `grep " version =" $SNAPCRAFT_PART_BUILD/version.py | cut -f3 -d= | tr -d "'[:space:]"`
+    build-packages:
+      - git
     build-environment:
       - SNAP_BUILD: "True"
   certbot-metadata:

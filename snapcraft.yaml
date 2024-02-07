@@ -15,6 +15,11 @@ parts:
   certbot-nginx-unit:
     plugin: python
     source: .
+    python-packages:
+      - pip
+      - setuptools
+      - setuptools-scm
+      - wheel
     override-pull: |
         snapcraftctl pull
         snapcraftctl set-version `python3 -m setuptools_scm`

@@ -16,8 +16,17 @@ The command `unitc` should be installed and executable.
 ## Installation ##
 
 * Via Snap (requires certbot to be installed via snap):
+    Install [snapd](https://snapcraft.io/docs/installing-snapd)
+    
+    install certbot
     ```
-    WIP
+    snap install --classic certbot
+    ```
+    install and configure this plugin
+    ```
+    sudo snap install --classic certbot-nginx-unit 
+    sudo snap set certbot trust-plugin-with-root=ok
+    sudo snap connect certbot:plugin certbot-nginx-unit
     ```
 
 * Via Pip

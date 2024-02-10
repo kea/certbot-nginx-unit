@@ -5,6 +5,7 @@ Authenticator is built on Certbot Webroot giant shoulders
 
 """
 import collections
+import copy
 import json
 import logging
 from datetime import datetime
@@ -128,9 +129,7 @@ class Configurator(common.Installer, interfaces.Authenticator):
         if "*:443" not in self._configuration["listeners"]:
             if "*:80" not in self._configuration["listeners"]:
                 raise errors.PluginError("No '*:80' default listeners configured")
-            self._configuration["listeners"]["*:443"] = self._configuration["listeners"]["*:80"]
-            new_route = self._ensure_acme_route(self._configuration["listeners"]["*:443"]["pass"])
-            self._configuration["listeners"]["*:80"] = {"pass": new_route}
+            self._configuration["listeners"]["*:443"] = copy.deepcopy(self._configuration["listeners"]["*:80"])
 
         if "tls" not in self._configuration["listeners"]["*:443"]:
             self._configuration["listeners"]["*:443"]["tls"] = {}
@@ -157,12 +156,11 @@ class Configurator(common.Installer, interfaces.Authenticator):
         self.unitc.put(listener_route, default_route.encode(), success_message, error_message)
 
     def _ensure_acme_route(self, actual_route: str) -> str:
-        acme_challenge_url = "/.well-known/acme-challenge/*"
-        acme_base_path = "/srv/www/unit"
+        acme_challenge_url = "/" + challenges.HTTP01.URI_ROOT_PATH + "/*"
         acme_route = [
             {
                 "match": {"uri": acme_challenge_url},
-                "action": {"share": acme_base_path + "/$uri"},
+                "action": {"share": self._challenge_path + "/$uri"},
             }
         ]
         if actual_route != "routes" and actual_route != "routes/acme":
@@ -190,8 +188,8 @@ class Configurator(common.Installer, interfaces.Authenticator):
             raise errors.PluginError("Cannot configure the routes: unknown route[0] type")
 
         first_route = self._configuration["routes"][0]
-        if "match" in first_route and "uri" in first_route["match"] and first_route["match"][
-            "uri"] == acme_challenge_url:
+        if ("match" in first_route and "uri" in first_route["match"]
+                and first_route["match"]["uri"] == acme_challenge_url):
             return "routes"
 
         routes = acme_route + self._configuration["routes"]
@@ -255,9 +253,9 @@ class Configurator(common.Installer, interfaces.Authenticator):
         # pylint: disable=unused-argument,missing-function-docstring
         return [challenges.HTTP01]
 
-    def perform(self, achalls: List[AnnotatedChallenge]) -> List[
-        challenges.ChallengeResponse]:  # pylint: disable=missing-function-docstring
+    def perform(self, achalls: List[AnnotatedChallenge]) -> List[challenges.ChallengeResponse]:
 
+        self.prepare()
         self._set_webroot(achalls)
         self._create_challenge_dir()
 
@@ -268,7 +266,7 @@ class Configurator(common.Installer, interfaces.Authenticator):
     def _set_webroot(self, achalls: Iterable[AnnotatedChallenge]) -> None:
         webroot_path = '/srv/www/unit/'
         if self.conf("path"):
-            webroot_path = self.conf("path")[-1]
+            webroot_path = self.conf("path")
 
         logger.info("Using the webroot path %s for all domains.", webroot_path)
 

@@ -24,7 +24,7 @@ The command `unitc` should be installed and executable.
     ```
     install and configure this plugin
     ```
-    sudo snap install --classic certbot-nginx-unit 
+    sudo snap install certbot-nginx-unit 
     sudo snap set certbot trust-plugin-with-root=ok
     sudo snap connect certbot:plugin certbot-nginx-unit
     ```
@@ -85,7 +85,7 @@ Configure the unit listener with `*:80` or `*:443`
 Now, generate and automatically install the certificate with
 
 ```
-# certbot --configurator nginx_unit -d www.myapp.com
+# certbot --configurator nginx-unit -d www.myapp.com
 ```
 
 The result is a certificate created and installed. 
@@ -157,8 +157,8 @@ Certbot installs a timer on the system to renew certificates one month before th
 You can run the certbot command for each domain
 
 ```
-# certbot --configurator nginx_unit -d www.myapp1.com
-# certbot --configurator nginx_unit -d www.myapp2.com
+# certbot --configurator nginx-unit -d www.myapp1.com
+# certbot --configurator nginx-unit -d www.myapp2.com
 # unitc '/config/listeners/*:443' 
 ```
 

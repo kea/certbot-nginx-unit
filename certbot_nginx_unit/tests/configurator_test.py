@@ -128,6 +128,7 @@ class ConfiguratorTest(test_util.ConfigTestCase):
 
         backups = os.path.join(logs_dir, "backups")
         self.configuration.backup_dir = backups
+        self.configuration.nginx_unit_path = logs_dir
 
         return Configurator(self.configuration, name="nginx_unit")
 
@@ -181,15 +182,43 @@ class ConfiguratorTest(test_util.ConfigTestCase):
             'Certificate deployed',
             'nginx unit copy to /certificates failed'
         )
-        unitc_mock.put.assert_any_call(
-            '/config/routes',
-            b'[{"match": {"uri": "/.well-known/acme-challenge/*"}, "action": {"share": "/srv/www/unit/$uri"}}, {"action": {"share": "/srv/www/unit/index.html"}}]'
-        )
+
+        print(unitc_mock.put.mock_calls)
         unitc_mock.put.assert_any_call(
             '/config/listeners',
-            b'{"*:80": {"pass": "routes"}, "*:443": {"pass": "routes", "tls": {"certificate": ["domain_' + entropy.encode() + b'"]}}}',
+            b'{"*:80": {"pass": "routes"}, "*:443": {"pass": "routes", "tls": {"certificate": ["domain_' +
+            entropy.encode() + b'"]}}}',
             put_success_message,
             put_error_message
+        )
+
+        notify.stop()
+
+    @mock.patch('certbot_nginx_unit.unitc')
+    @mock.patch('certbot.achallenges.AnnotatedChallenge')
+    def test_authenticate(self, unitc_mock, challenge_mock):
+        unitc_mock.get.side_effect = get_configuration_side_effect_80_listener
+        unitc_mock.put.side_effect = put_configuration_side_effect_80_listener
+
+        challenge_mock.response_and_validation.return_value = ("response", "validation")
+        challenge_mock.chall.encode.return_value = "token"
+
+        webroot = self.configuration.nginx_unit_path.encode()
+        configurator = self.config
+        configurator.unitc = unitc_mock
+        notify = mock.patch('certbot.display.util.notify')
+        notify.start()
+
+        assert ["response"] == configurator.perform([challenge_mock])
+
+        get_success_message = 'Get configuration'
+        get_error_message = 'nginx unit get configuration failed'
+
+        unitc_mock.get.assert_any_call("/config", get_success_message, get_error_message)
+        unitc_mock.put.assert_any_call(
+            '/config/routes',
+            b'[{"match": {"uri": "/.well-known/acme-challenge/*"}, "action": {"share": "' +
+            webroot + b'/$uri"}}, {"action": {"share": "/srv/www/unit/index.html"}}]'
         )
 
         notify.stop()

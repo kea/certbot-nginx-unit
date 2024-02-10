@@ -30,7 +30,7 @@ Homepage = "https://github.com/kea/certbot-nginx-unit"
 Issues = "https://github.com/kea/certbot-nginx-unit/issues"
 
 [project.entry-points."certbot.plugins"]
-nginx_unit = "certbot_nginx_unit.configurator:Configurator"
+nginx-unit = "certbot_nginx_unit.configurator:Configurator"
 
 [tool.setuptools_scm]
 version_file = "version.py"

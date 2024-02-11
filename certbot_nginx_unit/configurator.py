@@ -47,6 +47,7 @@ class Configurator(common.Installer, interfaces.Authenticator):
 
     def __init__(self, *args: Any, **kwargs: Any):
         super().__init__(*args, **kwargs)
+        self._prepared = False
         self._configuration = None
         self.unitc = Unitc()
         self._entropy = datetime.now().strftime("%Y%m%d%H%M%S")
@@ -55,6 +56,8 @@ class Configurator(common.Installer, interfaces.Authenticator):
         self._full_root: str = ""
         self._performed: DefaultDict[str, Set[AnnotatedChallenge]] = collections.defaultdict(set)
         self._created_dirs: List[str] = []
+        self._to_remove: List[str] = []
+        self._backup_routes: List[str] = []
 
     def get_all_names(self) -> Iterable[str]:
         return []
@@ -140,11 +143,13 @@ class Configurator(common.Installer, interfaces.Authenticator):
         if "listeners" not in self._configuration:
             raise errors.PluginError("No listeners configured")
         if "*:80" not in self._configuration["listeners"]:
-            raise errors.PluginError("No '*:80' default listeners configured")
+            self._configuration["listeners"]["*:80"] = {"pass": "routes"}
+            self._to_remove.append("/config/listeners/*:80")
         if "pass" not in self._configuration["listeners"]["*:80"]:
             raise errors.PluginError("Cannot configure the route for the *:80 listener")
 
         actual_route = self._configuration["listeners"]["*:80"]["pass"]
+        self._backup_routes = self._configuration.get("routes", [])
         default_route = self._ensure_acme_route(actual_route)
         if actual_route == default_route:
             return
@@ -237,7 +242,10 @@ class Configurator(common.Installer, interfaces.Authenticator):
         """Prepare the authenticator/installer."""
         # @todo verify "unitc" executable
         # @todo lock to prevent concurrent multi update
+        if self._prepared:
+            return
         self._configuration = self._get_unit_configuration("/config")
+        self._prepared = True
 
     def more_info(self) -> str:  # pylint: disable=missing-function-docstring
         return self.MORE_INFO.format(self.conf("path"))
@@ -339,6 +347,12 @@ class Configurator(common.Installer, interfaces.Authenticator):
         return response
 
     def cleanup(self, achalls: List[AnnotatedChallenge]) -> None:  # pylint: disable=missing-function-docstring
+        for config_path in self._to_remove:
+            self.unitc.delete(config_path, None, "Delete tmp configuration failed")
+
+        if self._configuration["routes"] != self._backup_routes:
+            self.unitc.put("/config/routes", json.dumps(self._backup_routes).encode())
+
         for achall in achalls:
             root_path = self._full_root
             if root_path is not None:

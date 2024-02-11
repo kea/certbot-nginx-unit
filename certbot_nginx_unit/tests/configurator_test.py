@@ -71,24 +71,6 @@ def only_80_listener_configuration_after_cert_list():
     }
 
 
-def only_80_listener_configuration_after_cert_dictionary():
-    return {
-        "listeners": {
-            "*:80": {"pass": "routes/acme"},
-            "*:443": {"pass": "routes/default"}
-        },
-        "routes": {
-            "acme": {
-                "match": {"uri": "/.well-known/acme-challenge/*"},
-                "action": {"share": "/srv/www/unit/$uri"},
-            },
-            "default": {
-                "action": {"share": "/srv/www/unit/index.html"}
-            }
-        }
-    }
-
-
 def get_configuration_side_effect(*args):
     if args[0] == "/config":
         return json.dumps(empty_configuration())
@@ -183,7 +165,6 @@ class ConfiguratorTest(test_util.ConfigTestCase):
             'nginx unit copy to /certificates failed'
         )
 
-        print(unitc_mock.put.mock_calls)
         unitc_mock.put.assert_any_call(
             '/config/listeners',
             b'{"*:80": {"pass": "routes"}, "*:443": {"pass": "routes", "tls": {"certificate": ["domain_' +
@@ -219,6 +200,12 @@ class ConfiguratorTest(test_util.ConfigTestCase):
             '/config/routes',
             b'[{"match": {"uri": "/.well-known/acme-challenge/*"}, "action": {"share": "' +
             webroot + b'/$uri"}}, {"action": {"share": "/srv/www/unit/index.html"}}]'
+        )
+
+        configurator.cleanup(challenge_mock)
+        unitc_mock.put.assert_any_call(
+            '/config/routes',
+            json.dumps(only_80_listener_configuration()['routes']).encode()
         )
 
         notify.stop()

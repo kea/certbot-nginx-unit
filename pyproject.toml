@@ -34,3 +34,4 @@ nginx-unit = "certbot_nginx_unit.configurator:Configurator"
 
 [tool.setuptools_scm]
 version_file = "version.py"
+local_scheme = "no-local-version"

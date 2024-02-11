@@ -1,10 +1,16 @@
 name: certbot-nginx-unit
 summary: Certbot plugin for Nginx Unit
-description: Certbot plugin for Nginx Unit
+description: |
+  Certbot plugin provides HTTP challenge and installation of certificates.
+  Support multi-domain and renew.
+  See https://github.com/kea/certbot-nginx-unit for installation and usage instructions.
 confinement: strict
 grade: stable
 base: core20
 adopt-info: certbot-nginx-unit
+license: MIT
+website: https://github.com/kea/certbot-nginx-unit
+issues: https://github.com/kea/certbot-nginx-unit/issues
 
 architectures:
   - build-on: amd64
@@ -16,8 +22,8 @@ parts:
     plugin: python
     source: .
     override-build: |
-        snapcraftctl build
-        snapcraftctl set-version `grep " version =" $SNAPCRAFT_PART_BUILD/version.py | cut -f3 -d= | tr -d "'[:space:]"`
+      snapcraftctl build
+      snapcraftctl set-version `grep " version =" $SNAPCRAFT_PART_BUILD/version.py | cut -f3 -d= | tr -d "'[:space:]"`
     build-packages:
       - git
     build-environment:
@@ -25,10 +31,10 @@ parts:
   certbot-metadata:
     plugin: dump
     source: .
-    stage: [setup.py, certbot-shared]
+    stage: [ setup.py, certbot-shared ]
     override-pull: |
-        snapcraftctl pull
-        mkdir -p $SNAPCRAFT_PART_SRC/certbot-shared
+      snapcraftctl pull
+      mkdir -p $SNAPCRAFT_PART_SRC/certbot-shared
 
 slots:
   certbot:

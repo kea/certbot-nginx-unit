@@ -146,11 +146,14 @@ class Configurator(common.Installer, interfaces.Authenticator):
         if "listeners" not in self._configuration:
             raise errors.PluginError("No listeners configured")
         if "*:80" not in self._configuration["listeners"]:
-            self._configuration["listeners"]["*:80"] = {"pass": "routes"}
+            self._backup_routes = self._configuration.get("routes", [])
+            default_route = self._ensure_acme_route("routes")
+            self._configuration["listeners"]["*:80"] = {"pass": default_route}
             listener_route = "/config/listeners/*:80"
             listener80 = json.dumps(self._configuration["listeners"]["*:80"]).encode()
             self.unitc.put(listener_route, listener80, success_message, error_message)
             self._to_remove.append("/config/listeners/*:80")
+            return
         if "pass" not in self._configuration["listeners"]["*:80"]:
             raise errors.PluginError("Cannot configure the route for the *:80 listener")
 

@@ -140,10 +140,16 @@ class Configurator(common.Installer, interfaces.Authenticator):
             self._configuration["listeners"]["*:443"]["tls"]["certificate"] = []
 
     def _ensure_challenge_listener(self):
+        success_message = "Updated listener for acme challenge"
+        error_message = "Update listener for acme challenge failed"
+
         if "listeners" not in self._configuration:
             raise errors.PluginError("No listeners configured")
         if "*:80" not in self._configuration["listeners"]:
             self._configuration["listeners"]["*:80"] = {"pass": "routes"}
+            listener_route = "/config/listeners/*:80"
+            listener80 = json.dumps(self._configuration["listeners"]["*:80"]).encode()
+            self.unitc.put(listener_route, listener80, success_message, error_message)
             self._to_remove.append("/config/listeners/*:80")
         if "pass" not in self._configuration["listeners"]["*:80"]:
             raise errors.PluginError("Cannot configure the route for the *:80 listener")
@@ -155,8 +161,6 @@ class Configurator(common.Installer, interfaces.Authenticator):
             return
 
         self._configuration["listeners"]["*:80"]["pass"] = default_route
-        success_message = "Updated listener for acme challenge"
-        error_message = "Update listener for acme challenge failed"
         listener_route = "/config/listeners/*:80/pass"
         self.unitc.put(listener_route, json.dumps(default_route).encode(), success_message, error_message)
 

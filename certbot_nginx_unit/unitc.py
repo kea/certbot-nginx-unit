@@ -17,7 +17,7 @@ class Unitc(object):
         with tempfile.TemporaryFile() as out:
             try:
                 params = ["unitc", method, path]
-                logger.debug("Unic params: %s", " ".join(params))
+                logger.debug("Unitc params: %s", " ".join(params))
                 proc = subprocess.run(params,
                                       env=util.env_no_snap_for_external_calls(),
                                       input=input_data,
@@ -29,7 +29,7 @@ class Unitc(object):
 
             out.seek(0)
             output = out.read().decode("utf-8")
-            logger.debug("unic /certificate: %s", output)
+            logger.debug("Unitc result: %s", output)
         # @todo from json check if error
         if proc.returncode != 0 or '"error"' in output:
             raise errors.Error(error_message)

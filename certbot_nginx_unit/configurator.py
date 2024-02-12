@@ -169,7 +169,7 @@ class Configurator(common.Installer, interfaces.Authenticator):
             }
         ]
         if actual_route != "routes" and actual_route != "routes/acme":
-            acme_route.append({"pass": actual_route})
+            acme_route.append({"action": {"pass": actual_route}})
 
         acme_route_json = json.dumps(acme_route)
 

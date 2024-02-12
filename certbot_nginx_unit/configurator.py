@@ -158,7 +158,7 @@ class Configurator(common.Installer, interfaces.Authenticator):
         success_message = "Updated listener for acme challenge"
         error_message = "Update listener for acme challenge failed"
         listener_route = "/config/listeners/*:80/pass"
-        self.unitc.put(listener_route, default_route.encode(), success_message, error_message)
+        self.unitc.put(listener_route, json.dumps(default_route).encode(), success_message, error_message)
 
     def _ensure_acme_route(self, actual_route: str) -> str:
         acme_challenge_url = "/" + challenges.HTTP01.URI_ROOT_PATH + "/*"

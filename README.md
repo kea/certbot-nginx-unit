@@ -44,7 +44,7 @@ The command `unitc` should be installed and executable.
     use the pip in the virtual environment to install or update
 
     ```
-    /some/path/bin/pip install -U certbot-nginx-unit
+    /some/path/bin/pip install -U certbot certbot-nginx-unit
     ```
 
     use the cerbot from the virtualenv, to avoid accidentally

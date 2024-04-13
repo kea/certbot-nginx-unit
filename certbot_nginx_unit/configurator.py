@@ -252,6 +252,7 @@ class Configurator(common.Installer, interfaces.Authenticator):
         if self._prepared:
             return
         self._configuration = self._get_unit_configuration("/config")
+        self._backup_routes = self._configuration.get("routes", [])
         self._prepared = True
 
     def more_info(self) -> str:  # pylint: disable=missing-function-docstring

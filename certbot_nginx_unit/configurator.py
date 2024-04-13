@@ -220,6 +220,7 @@ class Configurator(common.Installer, interfaces.Authenticator):
     def _get_unit_configuration(self, path: str):
         error_message = "nginx unit get configuration failed"
         configuration_str = self.unitc.get(path, "Get configuration", error_message)
+        logger.debug("Conf str '%s'", configuration_str)
 
         # @todo wrap configuration to a dedicated class
         return json.loads(configuration_str)
@@ -261,7 +262,7 @@ class Configurator(common.Installer, interfaces.Authenticator):
     ### Authenticator
     @classmethod
     def add_parser_arguments(cls, add: Callable[..., None]) -> None:
-        add("path", default=['/srv/www/unit/'],
+        add("path", default="/srv/www/unit/", type=str,
             help="public_html / webroot path. Only one catch 'em all temporary "
                  "directory --nginx-unit-path /srv/www/unit/ (default: /srv/www/unit/)")
 

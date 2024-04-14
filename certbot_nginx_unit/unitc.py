@@ -16,7 +16,7 @@ class Unitc(object):
         output = ""
         with tempfile.TemporaryFile() as out:
             try:
-                params = ["unitc", method, path]
+                params = ["unitc", "--no-log", method, path]
                 logger.debug("Unitc params: %s", " ".join(params))
                 proc = subprocess.run(params,
                                       env=util.env_no_snap_for_external_calls(),

@@ -31,7 +31,7 @@ The command `unitc` should be installed and executable.
 
 * Via Pip
     ```
-    pip install certbot-nginx-unit
+    pip install certbot certbot-nginx-unit
     ```
 
 * Via Pip virtual env

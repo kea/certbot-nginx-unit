@@ -30,7 +30,7 @@ CONFIG_TLS_CERTIFICATE_PATH = "/listeners/*:443/tls/certificate"
 logger = logging.getLogger(__name__)
 
 
-class Configurator(common.Installer, interfaces.Authenticator):
+class Configurator(common.Installer, interfaces.Authenticator, interfaces.RenewDeployer):
     """Nginx Unit certificate authenticator and installer plugin for Certbot"""
 
     description = """\
@@ -381,3 +381,25 @@ class Configurator(common.Installer, interfaces.Authenticator):
                 logger.debug("Error was: %s", exc)
         self._created_dirs = not_removed
         logger.debug("All challenges cleaned up")
+
+    def renew_deploy(self, lineage: interfaces.RenewableCert, *args: Any, **kwargs: Any) -> None:
+        """Perform updates defined by installer when a certificate has been renewed
+
+        If an installer is a subclass of the class containing this method, this
+        function will always be called when a certificate has been renewed by
+        running "certbot renew". For example if a plugin needs to copy a
+        certificate over, or change configuration based on the new certificate.
+
+        This method is called once for each lineage renewed
+
+        :param lineage: Certificate lineage object
+        :type lineage: RenewableCert
+
+        """
+        self.deploy_cert(
+            lineage.lineagename,
+            lineage.cert_path,
+            lineage.key_path,
+            lineage.chain_path,
+            lineage.fullchain_path
+        )

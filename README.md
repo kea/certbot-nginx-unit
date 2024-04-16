@@ -16,7 +16,8 @@ The command `unitc` should be installed and executable.
 ## Installation ##
 
 * Via Snap (requires certbot to be installed via snap):
-    Install [snapd](https://snapcraft.io/docs/installing-snapd)
+
+    install [snapd](https://snapcraft.io/docs/installing-snapd)
     
     install certbot
     ```

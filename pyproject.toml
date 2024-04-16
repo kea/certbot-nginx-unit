@@ -19,7 +19,7 @@ classifiers = [
     "License :: OSI Approved :: MIT License",
     "Intended Audience :: System Administrators",
     "Topic :: Security :: Cryptography",
-    "Development Status :: 4 - Beta",
+    "Development Status :: 5 - Production/Stable",
     "Environment :: Plugins",
     "Operating System :: OS Independent",
 ]

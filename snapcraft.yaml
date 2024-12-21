@@ -6,24 +6,24 @@ description: |
   See https://github.com/kea/certbot-nginx-unit for installation and usage instructions.
 confinement: strict
 grade: stable
-base: core20
+base: core24
 adopt-info: certbot-nginx-unit
 license: MIT
 website: https://github.com/kea/certbot-nginx-unit
 issues: https://github.com/kea/certbot-nginx-unit/issues
 
-architectures:
-  - build-on: amd64
-  - build-on: armhf
-  - build-on: arm64
+platforms:
+  amd64:
+  armhf:
+  arm64:
 
 parts:
   certbot-nginx-unit:
     plugin: python
     source: .
     override-build: |
-      snapcraftctl build
-      snapcraftctl set-version `grep " version =" $SNAPCRAFT_PART_BUILD/version.py | cut -f3 -d= | tr -d "'[:space:]"`
+      craftctl build
+      craftctl set version=$(grep " version =" $CRAFT_PART_BUILD/version.py | cut -f3 -d= | tr -d "'[:space:]")
     build-packages:
       - git
     build-environment:
@@ -33,15 +33,15 @@ parts:
     source: .
     stage: [ setup.py, certbot-shared ]
     override-pull: |
-      snapcraftctl pull
-      mkdir -p $SNAPCRAFT_PART_SRC/certbot-shared
+      craftctl default
+      mkdir -p $CRAFT_PART_SRC/certbot-shared
 
 slots:
   certbot:
     interface: content
     content: certbot-1
     read:
-      - $SNAP/lib/python3.8/site-packages
+      - $SNAP/lib/python3.12/site-packages
 
 plugs:
   certbot-metadata:

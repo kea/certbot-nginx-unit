@@ -128,7 +128,7 @@ class ConfiguratorTest(test_util.ConfigTestCase):
                 installer.deploy_cert("domain", "cert.pem", cert_file.name, "chain_path", cert_file.name)
 
             expected_msg = "No '*:80' default listeners configured"
-            self.assertEquals(str(ctx.exception), expected_msg)
+            self.assertEqual(str(ctx.exception), expected_msg)
 
     @mock.patch('certbot_nginx_unit.unitc')
     def test_only_80_listener_configuration(self, unitc_mock):

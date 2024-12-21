@@ -22,7 +22,7 @@ parts:
     plugin: python
     source: .
     override-build: |
-      craftctl build
+      craftctl default
       craftctl set version=$(grep " version =" $CRAFT_PART_BUILD/version.py | cut -f3 -d= | tr -d "'[:space:]")
     build-packages:
       - git

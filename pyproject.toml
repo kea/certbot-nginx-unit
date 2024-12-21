@@ -19,11 +19,17 @@ classifiers = [
     "License :: OSI Approved :: MIT License",
     "Intended Audience :: System Administrators",
     "Topic :: Security :: Cryptography",
+    "Topic :: Internet :: WWW/HTTP",
+    "Topic :: Security",
+    "Topic :: System :: Installation/Setup",
+    "Topic :: System :: Networking",
+    "Topic :: System :: Systems Administration",
+    "Topic :: Utilities",
     "Development Status :: 5 - Production/Stable",
     "Environment :: Plugins",
     "Operating System :: OS Independent",
 ]
-dynamic = ["optional-dependencies", "version"]
+dynamic = ["dependencies", "version"]
 
 [project.urls]
 Homepage = "https://github.com/kea/certbot-nginx-unit"

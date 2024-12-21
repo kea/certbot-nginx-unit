@@ -1,2 +1,4 @@
+.venv
+.tox
 dist
 certbot_nginx_unit.egg-info

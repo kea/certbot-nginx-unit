@@ -29,7 +29,7 @@ classifiers = [
     "Environment :: Plugins",
     "Operating System :: OS Independent",
 ]
-dynamic = ["optional-dependencies", "version"]
+dynamic = ["dependencies", "version"]
 
 [project.urls]
 Homepage = "https://github.com/kea/certbot-nginx-unit"

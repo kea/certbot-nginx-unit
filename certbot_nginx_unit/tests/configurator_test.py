@@ -71,6 +71,19 @@ def only_80_listener_configuration_after_cert_list():
     }
 
 
+def listener_443_string_certificate_configuration():
+    return {
+        "listeners": {
+            "*:80": {"pass": "routes"},
+            "*:443": {
+                "pass": "routes",
+                "tls": {"certificate": "existing_bundle"}
+            }
+        },
+        "routes": []
+    }
+
+
 def get_configuration_side_effect(*args):
     if args[0] == "/config":
         return json.dumps(empty_configuration())
@@ -92,6 +105,14 @@ def put_configuration_side_effect_80_listener(*args):
         return json.dumps(only_80_listener_configuration()['listeners'])
 
     return '{}'
+
+
+def get_configuration_side_effect_443_string_certificate(*args):
+    if args[0] == "/config":
+        return json.dumps(listener_443_string_certificate_configuration())
+    if args[0] == "/certificates":
+        return '{}'
+    return 'invalid json'
 
 
 class ConfiguratorTest(test_util.ConfigTestCase):
@@ -172,6 +193,30 @@ class ConfiguratorTest(test_util.ConfigTestCase):
             put_success_message,
             put_error_message
         )
+
+        notify.stop()
+
+    @mock.patch('certbot_nginx_unit.unitc')
+    def test_deploy_cert_normalizes_string_certificate(self, unitc_mock):
+        # Unit accepts tls.certificate as a single string; it must be normalized
+        # to a list, otherwise the string would be iterated char by char.
+        unitc_mock.get.side_effect = get_configuration_side_effect_443_string_certificate
+
+        installer = self.config
+        installer.unitc = unitc_mock
+        installer.prepare()
+
+        notify = mock.patch('certbot.display.util.notify')
+        notify.start()
+
+        with tempfile.NamedTemporaryFile() as cert_file:
+            cert_file.write('certificate content'.encode())
+            cert_file.seek(0)
+            installer.deploy_cert("domain", "cert.pem", cert_file.name, "chain_path", cert_file.name)
+
+        certificate = installer._configuration["listeners"]["*:443"]["tls"]["certificate"]
+        entropy = installer._entropy
+        self.assertEqual(certificate, ["existing_bundle", "domain_" + entropy])
 
         notify.stop()
 

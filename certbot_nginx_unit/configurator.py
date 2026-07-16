@@ -136,8 +136,11 @@ class Configurator(common.Installer, interfaces.Authenticator, interfaces.RenewD
 
         if "tls" not in self._configuration["listeners"]["*:443"]:
             self._configuration["listeners"]["*:443"]["tls"] = {}
-        if "certificate" not in self._configuration["listeners"]["*:443"]["tls"]:
-            self._configuration["listeners"]["*:443"]["tls"]["certificate"] = []
+        certificate = self._configuration["listeners"]["*:443"]["tls"].get("certificate", [])
+        # Unit accepts "certificate" as a single string or an array; normalize to a list.
+        if isinstance(certificate, str):
+            certificate = [certificate]
+        self._configuration["listeners"]["*:443"]["tls"]["certificate"] = certificate
 
     def _ensure_challenge_listener(self):
         success_message = "Updated listener for acme challenge"

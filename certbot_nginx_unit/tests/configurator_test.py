@@ -114,6 +114,26 @@ def get_configuration_side_effect_renewal(*args):
     return 'invalid json'
 
 
+def malformed_certificates_chains():
+    # Mix a valid old bundle with malformed entries that lack the expected keys.
+    return {
+        "example_20200101000000": {
+            "chain": [{"subject": {"common_name": "www.example.com"}}]
+        },
+        "no_chain_bundle": {},
+        "bad_chain_entry": {"chain": ["not-a-dict"]},
+        "not_even_a_dict": None
+    }
+
+
+def get_configuration_side_effect_malformed_certificates(*args):
+    if args[0] == "/config":
+        return json.dumps(renewal_configuration())
+    if args[0] == "/certificates":
+        return json.dumps(malformed_certificates_chains())
+    return 'invalid json'
+
+
 def get_configuration_side_effect(*args):
     if args[0] == "/config":
         return json.dumps(empty_configuration())
@@ -276,6 +296,38 @@ class ConfiguratorTest(test_util.ConfigTestCase):
         self.assertEqual(certificate, ["example_" + entropy])
 
         # Old bundle deleted from /certificates.
+        unitc_mock.delete.assert_any_call(
+            "/certificates/example_20200101000000",
+            None,
+            "Certificate deleted",
+            "nginx unit delete from /certificates failed"
+        )
+
+        notify.stop()
+
+    @mock.patch('certbot_nginx_unit.unitc')
+    def test_deploy_cert_survives_malformed_certificate_bundles(self, unitc_mock):
+        # A malformed bundle in /certificates must not abort the renewal;
+        # the valid old bundle is still pruned.
+        unitc_mock.get.side_effect = get_configuration_side_effect_malformed_certificates
+
+        installer = self.config
+        installer.unitc = unitc_mock
+        installer.prepare()
+
+        notify = mock.patch('certbot.display.util.notify')
+        notify.start()
+
+        with tempfile.NamedTemporaryFile() as cert_file:
+            cert_file.write('certificate content'.encode())
+            cert_file.seek(0)
+            installer.deploy_cert("example", "cert.pem", cert_file.name, "chain_path", cert_file.name)
+
+        entropy = installer._entropy
+
+        certificate = installer._configuration["listeners"]["*:443"]["tls"]["certificate"]
+        self.assertEqual(certificate, ["example_" + entropy])
+
         unitc_mock.delete.assert_any_call(
             "/certificates/example_20200101000000",
             None,

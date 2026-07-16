@@ -93,9 +93,12 @@ class Configurator(common.Installer, interfaces.Authenticator, interfaces.RenewD
             if bundle_name == cert_bundle_name:
                 continue
             # @todo check validity chain["validity"]["until"]?
+            # Guard against unexpected bundle shapes so one malformed entry in
+            # /certificates cannot abort the whole renewal with a KeyError.
+            chains = certificate.get("chain", []) if isinstance(certificate, dict) else []
             matches_common_name = any(
-                chain.get("subject", {}).get("common_name") == domain
-                for chain in certificate.get("chain", [])
+                isinstance(chain, dict) and chain.get("subject", {}).get("common_name") == domain
+                for chain in chains
             )
             if bundle_name.startswith(bundle_prefix) or matches_common_name:
                 old_certificate_bundle_names.append(bundle_name)

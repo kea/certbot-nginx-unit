@@ -82,12 +82,22 @@ class Configurator(common.Installer, interfaces.Authenticator, interfaces.RenewD
 
         certificates_chains = self._get_unit_configuration("/certificates")
 
+        # Bundle names are generated as "<domain>_<timestamp>", so the shared
+        # "<domain>_" prefix is the reliable signal for a lineage's old bundles:
+        # it holds even when the lineage name differs from the certificate's
+        # common name (custom --cert-name, or SAN certs whose CN is not the
+        # lineage name). The common-name check is kept as a fallback.
+        bundle_prefix = domain + "_"
         old_certificate_bundle_names = []
         for bundle_name, certificate in certificates_chains.items():
-            for chain in certificate["chain"]:
-                # @todo check validity chain["validity"]["until"]?
-                if bundle_name == cert_bundle_name or chain["subject"]["common_name"] != domain:
-                    continue
+            if bundle_name == cert_bundle_name:
+                continue
+            # @todo check validity chain["validity"]["until"]?
+            matches_common_name = any(
+                chain.get("subject", {}).get("common_name") == domain
+                for chain in certificate.get("chain", [])
+            )
+            if bundle_name.startswith(bundle_prefix) or matches_common_name:
                 old_certificate_bundle_names.append(bundle_name)
 
         if self._configuration is None:

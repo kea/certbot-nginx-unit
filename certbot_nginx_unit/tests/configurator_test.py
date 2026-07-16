@@ -84,6 +84,36 @@ def listener_443_string_certificate_configuration():
     }
 
 
+def renewal_configuration():
+    return {
+        "listeners": {
+            "*:80": {"pass": "routes"},
+            "*:443": {
+                "pass": "routes",
+                "tls": {"certificate": ["example_20200101000000"]}
+            }
+        },
+        "routes": []
+    }
+
+
+def renewal_certificates_chains():
+    # Common name differs from the lineage name ("example"), e.g. a SAN cert.
+    return {
+        "example_20200101000000": {
+            "chain": [{"subject": {"common_name": "www.example.com"}}]
+        }
+    }
+
+
+def get_configuration_side_effect_renewal(*args):
+    if args[0] == "/config":
+        return json.dumps(renewal_configuration())
+    if args[0] == "/certificates":
+        return json.dumps(renewal_certificates_chains())
+    return 'invalid json'
+
+
 def get_configuration_side_effect(*args):
     if args[0] == "/config":
         return json.dumps(empty_configuration())
@@ -217,6 +247,41 @@ class ConfiguratorTest(test_util.ConfigTestCase):
         certificate = installer._configuration["listeners"]["*:443"]["tls"]["certificate"]
         entropy = installer._entropy
         self.assertEqual(certificate, ["existing_bundle", "domain_" + entropy])
+
+        notify.stop()
+
+    @mock.patch('certbot_nginx_unit.unitc')
+    def test_deploy_cert_prunes_old_bundle_when_cn_differs_from_lineage(self, unitc_mock):
+        # On renewal the lineage name ("example") may differ from the cert
+        # common name ("www.example.com"). Old bundles must still be pruned,
+        # matched by the "<domain>_" name prefix.
+        unitc_mock.get.side_effect = get_configuration_side_effect_renewal
+
+        installer = self.config
+        installer.unitc = unitc_mock
+        installer.prepare()
+
+        notify = mock.patch('certbot.display.util.notify')
+        notify.start()
+
+        with tempfile.NamedTemporaryFile() as cert_file:
+            cert_file.write('certificate content'.encode())
+            cert_file.seek(0)
+            installer.deploy_cert("example", "cert.pem", cert_file.name, "chain_path", cert_file.name)
+
+        entropy = installer._entropy
+
+        # Old bundle removed from the listener, new one appended.
+        certificate = installer._configuration["listeners"]["*:443"]["tls"]["certificate"]
+        self.assertEqual(certificate, ["example_" + entropy])
+
+        # Old bundle deleted from /certificates.
+        unitc_mock.delete.assert_any_call(
+            "/certificates/example_20200101000000",
+            None,
+            "Certificate deleted",
+            "nginx unit delete from /certificates failed"
+        )
 
         notify.stop()
 

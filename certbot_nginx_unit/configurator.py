@@ -8,6 +8,7 @@ import collections
 import copy
 import json
 import logging
+import re
 from datetime import datetime
 
 from typing import Any, Callable, Optional, List, Union, Iterable, DefaultDict, Set, Type
@@ -83,12 +84,16 @@ class Configurator(common.Installer, interfaces.Authenticator, interfaces.RenewD
 
         certificates_chains = self._get_unit_configuration("/certificates")
 
-        # Bundle names are generated as "<domain>_<timestamp>", so the shared
-        # "<domain>_" prefix is the reliable signal for a lineage's old bundles:
-        # it holds even when the lineage name differs from the certificate's
-        # common name (custom --cert-name, or SAN certs whose CN is not the
-        # lineage name). The common-name check is kept as a fallback.
-        bundle_prefix = domain + "_"
+        # Bundle names are generated as "<domain>_<timestamp>" where the
+        # timestamp is a 14-digit "%Y%m%d%H%M%S" (see self._entropy). Match that
+        # exact shape rather than a loose "<domain>_" prefix: the underscore is a
+        # legal character in a lineage/--cert-name, so a prefix match would also
+        # catch a co-hosted lineage (e.g. renewing "site" pruning "site_backup_
+        # <ts>") and delete its live certificate. Anchoring to the timestamp
+        # still holds when the lineage name differs from the certificate common
+        # name (custom --cert-name, or SAN certs). The common-name check stays as
+        # a fallback.
+        bundle_re = re.compile(re.escape(domain) + r"_\d{14}$")
         old_certificate_bundle_names = []
         for bundle_name, certificate in certificates_chains.items():
             if bundle_name == cert_bundle_name:
@@ -101,7 +106,7 @@ class Configurator(common.Installer, interfaces.Authenticator, interfaces.RenewD
                 isinstance(chain, dict) and chain.get("subject", {}).get("common_name") == domain
                 for chain in chains
             )
-            if bundle_name.startswith(bundle_prefix) or matches_common_name:
+            if bundle_re.match(bundle_name) or matches_common_name:
                 old_certificate_bundle_names.append(bundle_name)
 
         if self._configuration is None:

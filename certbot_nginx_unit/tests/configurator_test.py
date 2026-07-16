@@ -134,6 +134,37 @@ def get_configuration_side_effect_malformed_certificates(*args):
     return 'invalid json'
 
 
+def cohosted_configuration():
+    return {
+        "listeners": {
+            "*:80": {"pass": "routes"},
+            "*:443": {
+                "pass": "routes",
+                "tls": {"certificate": ["site_20200101000000", "site_backup_20200101000000"]}
+            }
+        },
+        "routes": []
+    }
+
+
+def cohosted_certificates_chains():
+    return {
+        # Old bundle of the lineage being renewed -> must be pruned.
+        "site_20200101000000": {"chain": [{"subject": {"common_name": "site"}}]},
+        # A different co-hosted lineage that shares the "site_" prefix but whose
+        # timestamp segment is not 14 digits -> must survive.
+        "site_backup_20200101000000": {"chain": [{"subject": {"common_name": "site_backup"}}]},
+    }
+
+
+def get_configuration_side_effect_cohosted(*args):
+    if args[0] == "/config":
+        return json.dumps(cohosted_configuration())
+    if args[0] == "/certificates":
+        return json.dumps(cohosted_certificates_chains())
+    return 'invalid json'
+
+
 def dict_routes_configuration():
     return {
         "listeners": {
@@ -353,6 +384,45 @@ class ConfiguratorTest(test_util.ConfigTestCase):
             "Certificate deleted",
             "nginx unit delete from /certificates failed"
         )
+
+        notify.stop()
+
+    @mock.patch('certbot_nginx_unit.unitc')
+    def test_deploy_cert_does_not_prune_cohosted_lineage(self, unitc_mock):
+        # An underscore is a legal character in a lineage/--cert-name. Renewing
+        # "site" must prune only its own "site_<timestamp>" bundle, never the
+        # co-hosted "site_backup" lineage that merely shares the "site_" prefix.
+        unitc_mock.get.side_effect = get_configuration_side_effect_cohosted
+
+        installer = self.config
+        installer.unitc = unitc_mock
+        installer.prepare()
+
+        notify = mock.patch('certbot.display.util.notify')
+        notify.start()
+
+        with tempfile.NamedTemporaryFile() as cert_file:
+            cert_file.write('certificate content'.encode())
+            cert_file.seek(0)
+            installer.deploy_cert("site", "cert.pem", cert_file.name, "chain_path", cert_file.name)
+
+        entropy = installer._entropy
+
+        # Own old bundle pruned, co-hosted lineage kept, new bundle appended.
+        certificate = installer._configuration["listeners"]["*:443"]["tls"]["certificate"]
+        self.assertEqual(certificate, ["site_backup_20200101000000", "site_" + entropy])
+
+        # Own old bundle deleted from /certificates.
+        unitc_mock.delete.assert_any_call(
+            "/certificates/site_20200101000000",
+            None,
+            "Certificate deleted",
+            "nginx unit delete from /certificates failed"
+        )
+
+        # The co-hosted lineage's bundle must NOT be deleted.
+        for call in unitc_mock.delete.call_args_list:
+            self.assertNotEqual(call.args[0], "/certificates/site_backup_20200101000000")
 
         notify.stop()
 

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import tempfile
 import subprocess
 import logging
@@ -30,13 +31,25 @@ class Unitc(object):
             out.seek(0)
             output = out.read().decode("utf-8")
             logger.debug("Unitc result: %s", output)
-        # @todo from json check if error
-        if proc.returncode != 0 or '"error"' in output:
+        if proc.returncode != 0 or self._output_has_error(output):
             raise errors.Error(error_message)
         else:
             display_util.notify(success_message)
 
         return output
+
+    @staticmethod
+    def _output_has_error(output: str) -> bool:
+        # Unit's control API signals failures with a top-level {"error": ...}
+        # object. Match that structurally instead of scanning for the substring
+        # '"error"', which false-positives on any config/response that merely
+        # contains a route, header or value named "error". Non-JSON output is
+        # not treated as an error here; hard failures surface via the exit code.
+        try:
+            parsed = json.loads(output)
+        except (ValueError, TypeError):
+            return False
+        return isinstance(parsed, dict) and "error" in parsed
 
     def get(self, path: str, success_message: str = "", error_message: str = "") -> str:
         return self.call("GET", path, None, success_message, error_message)

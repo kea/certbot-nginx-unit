@@ -134,6 +134,25 @@ def get_configuration_side_effect_malformed_certificates(*args):
     return 'invalid json'
 
 
+def dict_routes_configuration():
+    return {
+        "listeners": {
+            "*:80": {"pass": "routes/main"}
+        },
+        "routes": {
+            "main": [{"action": {"share": "/srv/www/unit/index.html"}}]
+        }
+    }
+
+
+def get_configuration_side_effect_dict_routes(*args):
+    if args[0] == "/config":
+        return json.dumps(dict_routes_configuration())
+    if args[0] == "/certificates":
+        return '{}'
+    return 'invalid json'
+
+
 def get_configuration_side_effect(*args):
     if args[0] == "/config":
         return json.dumps(empty_configuration())
@@ -333,6 +352,37 @@ class ConfiguratorTest(test_util.ConfigTestCase):
             None,
             "Certificate deleted",
             "nginx unit delete from /certificates failed"
+        )
+
+        notify.stop()
+
+    @mock.patch('certbot_nginx_unit.unitc')
+    @mock.patch('certbot.achallenges.AnnotatedChallenge')
+    def test_cleanup_restores_dict_routes(self, unitc_mock, challenge_mock):
+        # With named (dict) routes, the acme route is injected in place. The
+        # backup must be an independent copy so cleanup restores the original.
+        unitc_mock.get.side_effect = get_configuration_side_effect_dict_routes
+
+        challenge_mock.response_and_validation.return_value = ("response", "validation")
+        challenge_mock.chall.encode.return_value = "token"
+
+        configurator = self.config
+        configurator.unitc = unitc_mock
+        notify = mock.patch('certbot.display.util.notify')
+        notify.start()
+
+        configurator.perform([challenge_mock])
+
+        # acme route injected into the live config.
+        self.assertIn("acme", configurator._configuration["routes"])
+        # Backup stays pristine (no acme key), otherwise cleanup would skip restore.
+        self.assertNotIn("acme", configurator._backup_routes)
+
+        configurator.cleanup(challenge_mock)
+
+        unitc_mock.put.assert_any_call(
+            '/config/routes',
+            json.dumps(dict_routes_configuration()['routes']).encode()
         )
 
         notify.stop()

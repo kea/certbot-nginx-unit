@@ -162,7 +162,7 @@ class Configurator(common.Installer, interfaces.Authenticator, interfaces.RenewD
         if "listeners" not in self._configuration:
             raise errors.PluginError("No listeners configured")
         if "*:80" not in self._configuration["listeners"]:
-            self._backup_routes = self._configuration.get("routes", [])
+            self._backup_routes = copy.deepcopy(self._configuration.get("routes", []))
             default_route = self._ensure_acme_route("routes")
             self._configuration["listeners"]["*:80"] = {"pass": default_route}
             listener_route = "/config/listeners/*:80"
@@ -174,7 +174,7 @@ class Configurator(common.Installer, interfaces.Authenticator, interfaces.RenewD
             raise errors.PluginError("Cannot configure the route for the *:80 listener")
 
         actual_route = self._configuration["listeners"]["*:80"]["pass"]
-        self._backup_routes = self._configuration.get("routes", [])
+        self._backup_routes = copy.deepcopy(self._configuration.get("routes", []))
         default_route = self._ensure_acme_route(actual_route)
         if actual_route == default_route:
             return
@@ -269,7 +269,7 @@ class Configurator(common.Installer, interfaces.Authenticator, interfaces.RenewD
         if self._prepared:
             return
         self._configuration = self._get_unit_configuration("/config")
-        self._backup_routes = self._configuration.get("routes", [])
+        self._backup_routes = copy.deepcopy(self._configuration.get("routes", []))
         self._prepared = True
 
     def more_info(self) -> str:  # pylint: disable=missing-function-docstring

@@ -378,12 +378,25 @@ class ConfiguratorTest(test_util.ConfigTestCase):
         # Backup stays pristine (no acme key), otherwise cleanup would skip restore.
         self.assertNotIn("acme", configurator._backup_routes)
 
+        # The *:80 listener was repointed at the injected acme route.
+        self.assertEqual(configurator._configuration["listeners"]["*:80"]["pass"], "routes/acme")
+        self.assertEqual(configurator._backup_listener_pass, "routes/main")
+
         configurator.cleanup(challenge_mock)
 
         unitc_mock.put.assert_any_call(
             '/config/routes',
             json.dumps(dict_routes_configuration()['routes']).encode()
         )
+
+        # The listener pass must be restored, otherwise it would dangle at the
+        # deleted "routes/acme" route and corrupt the *:80 listener.
+        unitc_mock.put.assert_any_call(
+            '/config/listeners/*:80/pass',
+            json.dumps("routes/main").encode()
+        )
+        self.assertEqual(configurator._configuration["listeners"]["*:80"]["pass"], "routes/main")
+        self.assertIsNone(configurator._backup_listener_pass)
 
         notify.stop()
 

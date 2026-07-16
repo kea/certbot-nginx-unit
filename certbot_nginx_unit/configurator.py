@@ -58,6 +58,7 @@ class Configurator(common.Installer, interfaces.Authenticator, interfaces.RenewD
         self._created_dirs: List[str] = []
         self._to_remove: List[str] = []
         self._backup_routes: List[str] = []
+        self._backup_listener_pass: Optional[str] = None
 
     def get_all_names(self) -> Iterable[str]:
         return []
@@ -179,6 +180,11 @@ class Configurator(common.Installer, interfaces.Authenticator, interfaces.RenewD
         if actual_route == default_route:
             return
 
+        # Remember the original listener target so cleanup can restore it.
+        # Without this, cleanup restores /config/routes (dropping the injected
+        # acme route) but leaves the listener pointing at the now-deleted route,
+        # corrupting the *:80 listener.
+        self._backup_listener_pass = actual_route
         self._configuration["listeners"]["*:80"]["pass"] = default_route
         listener_route = "/config/listeners/*:80/pass"
         self.unitc.put(listener_route, json.dumps(default_route).encode(), success_message, error_message)
@@ -377,6 +383,14 @@ class Configurator(common.Installer, interfaces.Authenticator, interfaces.RenewD
 
         if self._configuration["routes"] != self._backup_routes:
             self.unitc.put("/config/routes", json.dumps(self._backup_routes).encode())
+
+        if self._backup_listener_pass is not None:
+            self.unitc.put(
+                "/config/listeners/*:80/pass",
+                json.dumps(self._backup_listener_pass).encode()
+            )
+            self._configuration["listeners"]["*:80"]["pass"] = self._backup_listener_pass
+            self._backup_listener_pass = None
 
         for achall in achalls:
             root_path = self._full_root

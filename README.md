@@ -9,7 +9,7 @@ The command `unitc` should be installed and executable.
 ## Current Features ##
 
 * Supports NGINX Unit/1.31*
-* Supports cerbot 2.12+ / 3+
+* Supports certbot 3+ (Python 3.10+)
 * install certificates
 * automatic renewal certificates
 

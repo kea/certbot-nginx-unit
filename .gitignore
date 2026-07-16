@@ -2,3 +2,5 @@
 .tox
 dist
 certbot_nginx_unit.egg-info
+version.py
+__pycache__/

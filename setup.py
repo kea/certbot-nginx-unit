@@ -7,7 +7,7 @@ test_extras = [
     "pytest",
 ]
 
-certbot_version = '2.12.0.dev0'
+certbot_version = '3.0'
 
 install_requires = []
 if not os.environ.get("SNAP_BUILD"):

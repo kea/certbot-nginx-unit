@@ -381,7 +381,10 @@ class Configurator(common.Installer, interfaces.Authenticator, interfaces.RenewD
         for config_path in self._to_remove:
             self.unitc.delete(config_path, None, "Delete tmp configuration failed")
 
-        if self._configuration["routes"] != self._backup_routes:
+        # Use .get: perform() may raise before any route was set (e.g. a *:80
+        # listener with no "pass"), leaving the config without a "routes" key;
+        # a raw lookup here would mask the real error with a KeyError.
+        if self._configuration.get("routes", []) != self._backup_routes:
             self.unitc.put("/config/routes", json.dumps(self._backup_routes).encode())
 
         if self._backup_listener_pass is not None:

@@ -401,6 +401,34 @@ class ConfiguratorTest(test_util.ConfigTestCase):
         notify.stop()
 
     @mock.patch('certbot_nginx_unit.unitc')
+    def test_cleanup_without_routes_key_does_not_raise(self, unitc_mock):
+        # A Unit config may not contain a "routes" key at all (e.g. perform
+        # aborted before any route was set). cleanup must not crash with a
+        # KeyError while checking whether the routes need restoring.
+        def side_effect(*args):
+            if args[0] == "/config":
+                return json.dumps({"listeners": {}})
+            return 'invalid json'
+        unitc_mock.get.side_effect = side_effect
+
+        configurator = self.config
+        configurator.unitc = unitc_mock
+        notify = mock.patch('certbot.display.util.notify')
+        notify.start()
+
+        configurator.prepare()
+        self.assertNotIn("routes", configurator._configuration)
+
+        # Empty achalls: exercise only the routes-restore branch of cleanup.
+        configurator.cleanup([])
+
+        # Backup is empty and the config has no routes: nothing to restore.
+        for call in unitc_mock.put.call_args_list:
+            self.assertNotEqual(call.args[0], "/config/routes")
+
+        notify.stop()
+
+    @mock.patch('certbot_nginx_unit.unitc')
     @mock.patch('certbot.achallenges.AnnotatedChallenge')
     def test_authenticate(self, unitc_mock, challenge_mock):
         unitc_mock.get.side_effect = get_configuration_side_effect_80_listener

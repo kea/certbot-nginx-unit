@@ -402,11 +402,20 @@ class Configurator(common.Installer, interfaces.Authenticator, interfaces.RenewD
 
         for achall in achalls:
             root_path = self._full_root
-            if root_path is not None:
+            # Only clean up challenges that were actually written. perform() may
+            # abort before _perform_single (e.g. _ensure_challenge_listener
+            # raises), yet certbot still calls cleanup with every achall; a bare
+            # os.remove would then raise FileNotFoundError and mask the real
+            # error.
+            if root_path and achall in self._performed[root_path]:
                 validation_path = self._get_validation_path(root_path, achall)
                 logger.debug("Removing %s", validation_path)
-                os.remove(validation_path)
-                self._performed[root_path].remove(achall)
+                try:
+                    os.remove(validation_path)
+                except OSError as exc:
+                    logger.warning("Could not remove challenge file %s", validation_path)
+                    logger.debug("Error was: %s", exc)
+                self._performed[root_path].discard(achall)
 
         not_removed: List[str] = []
         while self._created_dirs:

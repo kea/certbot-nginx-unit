@@ -500,6 +500,34 @@ class ConfiguratorTest(test_util.ConfigTestCase):
 
     @mock.patch('certbot_nginx_unit.unitc')
     @mock.patch('certbot.achallenges.AnnotatedChallenge')
+    def test_cleanup_after_failed_perform_does_not_raise(self, unitc_mock, challenge_mock):
+        # perform() aborts before any validation file is written (the *:80
+        # listener has no "pass"), yet certbot still calls cleanup with every
+        # achall. cleanup must not crash removing a file that never existed.
+        def side_effect(*args):
+            if args[0] == "/config":
+                return json.dumps({"listeners": {"*:80": {}}, "routes": []})
+            return 'invalid json'
+        unitc_mock.get.side_effect = side_effect
+        challenge_mock.response_and_validation.return_value = ("response", "validation")
+        challenge_mock.chall.encode.return_value = "token"
+
+        configurator = self.config
+        configurator.unitc = unitc_mock
+        notify = mock.patch('certbot.display.util.notify')
+        notify.start()
+
+        with self.assertRaises(errors.PluginError):
+            configurator.perform([challenge_mock])
+
+        # Nothing was performed; cleanup is a no-op instead of a crash.
+        configurator.cleanup([challenge_mock])
+        self.assertEqual(configurator._performed[configurator._full_root], set())
+
+        notify.stop()
+
+    @mock.patch('certbot_nginx_unit.unitc')
+    @mock.patch('certbot.achallenges.AnnotatedChallenge')
     def test_authenticate(self, unitc_mock, challenge_mock):
         unitc_mock.get.side_effect = get_configuration_side_effect_80_listener
         unitc_mock.put.side_effect = put_configuration_side_effect_80_listener
